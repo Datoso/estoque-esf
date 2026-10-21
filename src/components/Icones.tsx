@@ -54,7 +54,8 @@ export const IcMais = ({ size, className }: P) => (
 export const IcCalendario = ({ size, className }: P) => (
   <svg {...base(size)} className={className}>
     <rect x="4" y="5" width="16" height="15" rx="2.5" />
-    <path d="M8 3v4M16 3v4M4 10h16M8.5 14h.01M12 14h.01M15.5 14h.01M8.5 17h.01M12 17h.01" strokeWidth="2.4" />
+    <path d="M8 3v4M16 3v4M4 10h16" />
+    <path d="M8.5 14h.01M12 14h.01M15.5 14h.01M8.5 17h.01M12 17h.01" strokeWidth="2.4" />
   </svg>
 );
 export const IcAgenda = IcCalendario;
