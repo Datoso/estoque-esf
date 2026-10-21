@@ -1,4 +1,4 @@
-import { db, gravarMeta, lerMeta, type MovPendente } from './db';
+import { db, gravarMeta, lerMeta, type MovPendente, type Pedido, type PedidoItem } from './db';
 import { supabase } from './supabase';
 
 export interface Perfil { user_id: string; unidade_id: number; unidade_nome: string; perfil: string; nome: string }
@@ -90,25 +90,40 @@ function paraServidor(m: MovPendente) {
 
 /** Baixa cadastros e saldos da unidade e troca a cópia local. */
 export async function puxarDados(unidadeId: number): Promise<void> {
-  const [cat, prod, lot, sal, par] = await Promise.all([
+  const desde = new Date(Date.now() - 60 * 864e5).toISOString();
+  const [cat, prod, lot, sal, par, cmm, ped, emb, cfg] = await Promise.all([
     supabase.from('categoria').select('id, nome, ordem'),
     supabase.from('produto').select('id, categoria_id, tipo, nome, principio_ativo, unidade_medida, preco_custo, doses_por_frasco, prazo_apos_abertura_h').eq('ativo', true),
     supabase.from('lote').select('id, produto_id, numero, validade, status, custo_unitario'),
     supabase.from('saldo_lote').select('lote_id, saldo').eq('unidade_id', unidadeId),
-    supabase.from('parametro_estoque').select('produto_id, estoque_minimo, tempo_reposicao_dias, cmm_manual, favorito').eq('unidade_id', unidadeId)
+    supabase.from('parametro_estoque').select('produto_id, estoque_minimo, tempo_reposicao_dias, cmm_manual, favorito').eq('unidade_id', unidadeId),
+    supabase.from('consumo_mensal').select('produto_id, cmm').eq('unidade_id', unidadeId),
+    supabase.from('pedido').select('id, numero, status, criado_em, pedido_item ( id, pedido_id, produto_id, qtd_sugerida, qtd_pedida, qtd_recebida )')
+      .eq('unidade_id', unidadeId).neq('status', 'cancelado').gte('criado_em', desde).order('numero', { ascending: false }),
+    supabase.from('produto_embalagem').select('id, produto_id, nome, fator_conversao'),
+    supabase.from('configuracao').select('margem_seguranca_meses, periodo_cobertura_meses, semaforo_amarelo_dias, semaforo_vermelho_dias').limit(1)
   ]);
-  const erro = cat.error ?? prod.error ?? lot.error ?? sal.error ?? par.error;
+  const erro = cat.error ?? prod.error ?? lot.error ?? sal.error ?? par.error ?? cmm.error ?? ped.error ?? emb.error ?? cfg.error;
   if (erro) throw new Error(erro.message);
-  await db.transaction('rw', [db.categorias, db.produtos, db.lotes, db.saldos, db.parametros, db.fila], async () => {
+  const cmmPor = new Map((cmm.data ?? []).map(c => [c.produto_id, Number(c.cmm)]));
+  const pedidos = (ped.data ?? []) as unknown as (Pedido & { pedido_item: PedidoItem[] })[];
+  await db.transaction('rw', [db.categorias, db.produtos, db.lotes, db.saldos, db.parametros, db.fila, db.pedidos, db.pedidoItens, db.embalagens], async () => {
     // O saldo do servidor já inclui o que foi enviado: tira da fila na mesma transação
     await db.fila.where('status').equals('enviado').delete();
-    await Promise.all([db.categorias.clear(), db.produtos.clear(), db.lotes.clear(), db.saldos.clear(), db.parametros.clear()]);
+    await Promise.all([db.categorias.clear(), db.produtos.clear(), db.lotes.clear(), db.saldos.clear(), db.parametros.clear(), db.pedidos.clear(), db.pedidoItens.clear(), db.embalagens.clear()]);
+    await db.pedidos.bulkPut(pedidos.map(({ pedido_item: _i, ...p }) => p));
+    await db.pedidoItens.bulkPut(pedidos.flatMap(p => p.pedido_item));
+    await db.embalagens.bulkPut(emb.data ?? []);
     await db.categorias.bulkPut(cat.data ?? []);
     await db.produtos.bulkPut((prod.data ?? []).map(p => ({ ...p, preco_custo: Number(p.preco_custo) })));
     await db.lotes.bulkPut((lot.data ?? []).map(l => ({ ...l, custo_unitario: l.custo_unitario == null ? null : Number(l.custo_unitario) })));
     await db.saldos.bulkPut(sal.data ?? []);
-    await db.parametros.bulkPut((par.data ?? []).map(p => ({ ...p, cmm_manual: p.cmm_manual == null ? null : Number(p.cmm_manual) })));
+    await db.parametros.bulkPut((par.data ?? []).map(p => ({ ...p, cmm_manual: p.cmm_manual == null ? null : Number(p.cmm_manual), cmm: cmmPor.get(p.produto_id) ?? 0 })));
   });
+  if (cfg.data?.[0]) {
+    const c = cfg.data[0];
+    await gravarMeta('configuracao', { margem_seguranca_meses: Number(c.margem_seguranca_meses), periodo_cobertura_meses: Number(c.periodo_cobertura_meses), semaforo_amarelo_dias: c.semaforo_amarelo_dias, semaforo_vermelho_dias: c.semaforo_vermelho_dias });
+  }
   await gravarMeta('ultima_sincronizacao', new Date().toISOString());
 }
 

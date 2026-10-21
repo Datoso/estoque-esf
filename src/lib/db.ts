@@ -32,7 +32,13 @@ export interface Parametro {
   tempo_reposicao_dias: number;
   cmm_manual: number | null;
   favorito: boolean;
+  cmm: number; // consumo médio mensal (view consumo_mensal)
 }
+
+export interface Pedido { id: number; numero: number; status: string; criado_em: string }
+export interface PedidoItem { id: number; pedido_id: number; produto_id: number; qtd_sugerida: number; qtd_pedida: number; qtd_recebida: number }
+export interface Embalagem { id: number; produto_id: number; nome: string; fator_conversao: number }
+export interface Configuracao { margem_seguranca_meses: number; periodo_cobertura_meses: number; semaforo_amarelo_dias: number; semaforo_vermelho_dias: number }
 
 /** Movimentação criada no aparelho e ainda não confirmada pelo servidor. */
 export interface MovPendente {
@@ -66,6 +72,9 @@ class BancoLocal extends Dexie {
   parametros!: Table<Parametro, number>;
   fila!: Table<MovPendente, string>;
   confirmadas!: Table<MovConfirmada, string>;
+  pedidos!: Table<Pedido, number>;
+  pedidoItens!: Table<PedidoItem, number>;
+  embalagens!: Table<Embalagem, number>;
   meta!: Table<Meta, string>;
 
   constructor() {
@@ -79,6 +88,11 @@ class BancoLocal extends Dexie {
       fila: 'id, seq_local, status, grupo',
       confirmadas: 'id, grupo',
       meta: 'chave'
+    });
+    this.version(2).stores({
+      pedidos: 'id, numero, status',
+      pedidoItens: 'id, pedido_id, produto_id',
+      embalagens: 'id, produto_id'
     });
   }
 }

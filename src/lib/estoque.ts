@@ -89,3 +89,24 @@ export function formatarData(iso: string): string {
 export function formatarNumero(n: number): string {
   return n.toLocaleString('pt-BR');
 }
+
+/**
+ * RN05 — ponto de pedido = maior entre CMM × (tempo de reposição + margem, em meses) e o estoque mínimo manual.
+ */
+export function pontoPedido(cmm: number, tempoReposicaoDias: number, margemMeses: number, minimo: number): number {
+  return Math.max(Math.round(cmm * (tempoReposicaoDias / 30 + margemMeses)), minimo);
+}
+
+/**
+ * RN05 — quantidade sugerida = máx(0, CMM × cobertura − disponível − em trânsito), arredondada para cima em embalagens.
+ */
+export function quantidadeSugerida(cmm: number, coberturaMeses: number, disponivel: number, emTransito: number, fatorEmbalagem = 1): number {
+  const bruta = Math.max(0, cmm * coberturaMeses - disponivel - emTransito);
+  const f = Math.max(1, fatorEmbalagem);
+  return Math.ceil(bruta / f) * f;
+}
+
+/** Item entra na lista de reposição quando disponível + em trânsito chega ao ponto de pedido. */
+export function entraNaReposicao(disponivel: number, emTransito: number, ponto: number): boolean {
+  return ponto > 0 && disponivel + emTransito <= ponto;
+}

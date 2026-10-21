@@ -4,17 +4,19 @@ import { supabase } from './lib/supabase';
 import { carregarPerfil, sincronizar, type Perfil } from './lib/sync';
 import { db, gravarMeta, lerMeta } from './lib/db';
 import { useEstoque, type ItemEstoque } from './lib/useEstoque';
-import { desfazerBaixa, registrarBaixa, registrarPerdaVencido } from './lib/acoes';
+import { aprovarPedido, desfazerBaixa, registrarBaixa, registrarEntrada, registrarPerdaVencido, type DadosEntrada } from './lib/acoes';
 import type { LoteSaldo } from './lib/estoque';
 import { Login } from './screens/Login';
 import { Inicio } from './screens/Inicio';
 import { EstoqueTela } from './screens/EstoqueTela';
 import { Validades } from './screens/Validades';
 import { Mais } from './screens/Mais';
+import { Reposicao } from './screens/Reposicao';
+import { Entrada } from './screens/Entrada';
 import { BaixaSheet } from './components/BaixaSheet';
 import { IcCaixa, IcCalendario, IcInicio, IcLua, IcMais, IcSol, IcSync, Laco } from './components/Icones';
 
-type Tela = 'inicio' | 'estoque' | 'validades' | 'mais';
+type Tela = 'inicio' | 'estoque' | 'validades' | 'mais' | 'repor' | 'entrada';
 type Toast = { msg: string; desfazer?: string } | null;
 
 function lerPref(chave: string, padrao: string): string {
@@ -122,6 +124,24 @@ export default function App() {
     if (navigator.onLine) sincronizarAgora(true);
   }
 
+  async function aprovar(itens: { produto_id: number; qtd_sugerida: number; qtd_pedida: number }[]) {
+    if (!perfil) return;
+    try {
+      const num = await aprovarPedido(perfil, itens);
+      await sincronizarAgora(true);
+      avisar(`Pedido #${String(num).padStart(3, '0')} enviado ao almoxarifado`);
+    } catch (e) {
+      avisar((e as Error).message);
+    }
+  }
+
+  async function receber(d: DadosEntrada) {
+    if (!perfil) return;
+    const status = await registrarEntrada(perfil, d);
+    await sincronizarAgora(true);
+    avisar(status === 'recebido' ? 'Entrada registrada · pedido recebido por completo' : status === 'parcial' ? 'Entrada registrada · pedido parcialmente recebido' : 'Entrada registrada');
+  }
+
   async function sair() {
     const pend = await db.fila.where('status').anyOf('pendente', 'erro').count();
     if (pend > 0) { avisar(`Há ${pend} movimentações não enviadas. Sincronize antes de sair.`); return; }
@@ -175,12 +195,16 @@ export default function App() {
           <p className="sutil">Carregando o estoque da unidade…</p>
         ) : (
           <>
-            {tela === 'inicio' && <Inicio estoque={estoque} abrirBaixa={setBaixa} irValidades={() => setTela('validades')} irEstoque={() => setTela('estoque')} />}
+            {tela === 'inicio' && <Inicio estoque={estoque} abrirBaixa={setBaixa} irValidades={() => setTela('validades')} irEstoque={() => setTela('repor')} />}
+            {tela === 'repor' && <Reposicao estoque={estoque} podeAprovar={['coordenador', 'admin'].includes(perfil.perfil)} voltar={() => setTela('mais')} aprovar={aprovar} />}
+            {tela === 'entrada' && <Entrada estoque={estoque} voltar={() => setTela('mais')} registrar={receber} />}
             {tela === 'estoque' && <EstoqueTela estoque={estoque} abrirBaixa={setBaixa} />}
             {tela === 'validades' && <Validades estoque={estoque} perderVencido={perderVencido} />}
             {tela === 'mais' && (
               <Mais perfil={perfil} tema={tema} setTema={t => { setTemaSt(t); gravarPref('tema', t); }} modo={modo} setModo={m => { setModoSt(m); gravarPref('modo', m); }}
-                ultimaSync={ultimaSync} pendentes={pend} comErro={estoque.comErro} sincronizarAgora={() => sincronizarAgora()} sair={sair} />
+                ultimaSync={ultimaSync} pendentes={pend} comErro={estoque.comErro} sincronizarAgora={() => sincronizarAgora()} sair={sair}
+                irRepor={() => setTela('repor')} irEntrada={() => setTela('entrada')}
+                nRepor={estoque.itens.filter(i => i.repor).length} nAbertos={estoque.pedidos.filter(p => p.status !== 'recebido').length} />
             )}
           </>
         )}
@@ -191,7 +215,7 @@ export default function App() {
 
       <nav className="barra" aria-label="Navegação principal">
         {abas.map(({ id, nome, Ic }) => (
-          <button key={id} aria-current={tela === id ? 'page' : undefined} onClick={() => setTela(id)}>
+          <button key={id} aria-current={tela === id || (id === 'mais' && (tela === 'repor' || tela === 'entrada')) ? 'page' : undefined} onClick={() => setTela(id)}>
             <span className="pil"><Ic /></span>{nome}
           </button>
         ))}

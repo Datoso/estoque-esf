@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { casaBusca, diasAte, faixa, lotesFefo, planejarBaixa, precisaRepor, saldosPorLote, type LoteSaldo } from './estoque';
+import { casaBusca, diasAte, entraNaReposicao, faixa, lotesFefo, planejarBaixa, pontoPedido, precisaRepor, quantidadeSugerida, saldosPorLote, type LoteSaldo } from './estoque';
 
 const HOJE = '2026-10-20';
 const lote = (id: number, validade: string, saldo: number, status = 'liberado'): LoteSaldo =>
@@ -64,5 +64,22 @@ describe('reposição e busca', () => {
     expect(casaBusca('Álcool 70% 1 L', 'alcool')).toBe(true);
     expect(casaBusca('Dipirona 500 mg/ml amp.', 'dipiroma')).toBe(true);
     expect(casaBusca('Seringa 5 ml', 'luva')).toBe(false);
+  });
+});
+
+describe('reposição (RN05)', () => {
+  it('ponto de pedido usa o maior entre o cálculo e o mínimo', () => {
+    expect(pontoPedido(600, 15, 0.5, 300)).toBe(600); // 600 × (0,5 + 0,5)
+    expect(pontoPedido(70, 15, 0.5, 80)).toBe(80); // 70 × 1 = 70 < mínimo 80
+    expect(pontoPedido(0, 15, 0.5, 0)).toBe(0);
+  });
+  it('sugere cobertura de 2 meses descontando saldo e trânsito, em caixas', () => {
+    expect(quantidadeSugerida(600, 2, 550, 0, 100)).toBe(700); // 650 → 7 caixas
+    expect(quantidadeSugerida(70, 2, 60, 0)).toBe(80);
+    expect(quantidadeSugerida(70, 2, 60, 200)).toBe(0); // já há pedido a caminho
+  });
+  it('item com pedido a caminho sai da lista', () => {
+    expect(entraNaReposicao(60, 0, 80)).toBe(true);
+    expect(entraNaReposicao(60, 80, 80)).toBe(false);
   });
 });

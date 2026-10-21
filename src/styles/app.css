@@ -109,3 +109,28 @@ nav.barra button[aria-current='page'] .pil { background: var(--soft); }
 .rodape-rosa { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--ink2); }
 .rodape-rosa b { color: var(--accent); }
 .rodape-rosa em { font-family: var(--font-display); font-size: 15px; color: var(--ink); }
+
+/* Reposição e entrada */
+.cab-sub { display: flex; align-items: center; gap: 10px; }
+.cab-sub .redondo { border-radius: 12px; font-size: 26px; line-height: 1; }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.trio span { display: flex; flex-direction: column; gap: 2px; }
+.trio small { font-size: 11.5px; color: var(--ink2); }
+.trio b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.ajuste { display: flex; align-items: center; gap: 12px; background: var(--bg); border-radius: 12px; padding: 8px; }
+.ajuste button { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 22px; font-weight: 700; }
+.ajuste span { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.ajuste b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.ajuste small { font-size: 12px; color: var(--ink2); }
+.status { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; flex: none; }
+.st-enviado { background: var(--soft); color: var(--accent); }
+.st-parcial { background: var(--alerta-bg); color: var(--alerta-ink); }
+.st-recebido { background: var(--soft); color: var(--verde); }
+.tile-baixo { min-height: 72px; }
+.tile-baixo strong { font-size: 14px; }
+.tile-baixo span { font-size: 12px; }
+.duas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.form-entrada { gap: 14px; padding: 16px; }
+.form-entrada .campo input { height: 48px; font-size: 16px; }
+.menu-item { justify-content: space-between; }
+.menu-item .badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: var(--alerta-bg); color: var(--alerta-ink); flex: none; }

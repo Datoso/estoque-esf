@@ -1,6 +1,7 @@
 import { db, type MovPendente } from './db';
 import { planejarBaixa, type LoteSaldo } from './estoque';
 import { dispositivoId, proximaSequencia, type Perfil } from './sync';
+import { supabase } from './supabase';
 
 async function novaMov(perfil: Perfil, grupo: string, base: Pick<MovPendente, 'lote_id' | 'tipo' | 'quantidade' | 'motivo' | 'ref_estorno_id'> & { excecao_fefo?: boolean }): Promise<MovPendente> {
   return {
@@ -67,4 +68,47 @@ export async function registrarPerdaVencido(perfil: Perfil, lote: LoteSaldo): Pr
   if (lote.saldo <= 0) return;
   const grupo = crypto.randomUUID();
   await db.fila.add(await novaMov(perfil, grupo, { lote_id: lote.id, tipo: 'perda', quantidade: -lote.saldo, motivo: 'Vencido · descarte', ref_estorno_id: null }));
+}
+
+function exigirInternet() {
+  if (!navigator.onLine) throw new Error('Esta ação precisa de internet. Tente quando o sinal voltar.');
+}
+
+/** RF20/RF21: coordenação aprova e envia o pedido ao almoxarifado. Precisa de internet (gera o número). */
+export async function aprovarPedido(perfil: Perfil, itens: { produto_id: number; qtd_sugerida: number; qtd_pedida: number }[]): Promise<number> {
+  exigirInternet();
+  const { data, error } = await supabase.rpc('criar_pedido', { p_unidade: perfil.unidade_id, p_itens: itens.filter(i => i.qtd_pedida > 0) });
+  if (error) throw new Error(error.message);
+  return (data as { numero: number }[])[0].numero;
+}
+
+export interface DadosEntrada {
+  produto_id: number;
+  lote: string;
+  validade: string;
+  quantidade: number; // já na menor unidade
+  origem: 'almoxarifado' | 'programa_estadual' | 'programa_federal' | 'doacao';
+  documento: string;
+  pedido_id: number | null;
+}
+
+/** RF09/RF48: entrada com lote, validade, origem e documento; atualiza o pedido quando houver. */
+export async function registrarEntrada(perfil: Perfil, d: DadosEntrada): Promise<string | null> {
+  exigirInternet();
+  const { data, error } = await supabase.rpc('registrar_entrada', {
+    p_mov_id: crypto.randomUUID(),
+    p_unidade: perfil.unidade_id,
+    p_produto: d.produto_id,
+    p_numero_lote: d.lote,
+    p_validade: d.validade,
+    p_quantidade: d.quantidade,
+    p_origem: d.origem,
+    p_documento: d.documento,
+    p_pedido_id: d.pedido_id,
+    p_dispositivo: await dispositivoId(),
+    p_seq: await proximaSequencia(),
+    p_criado_em: new Date().toISOString()
+  });
+  if (error) throw new Error(error.message);
+  return (data as { pedido_status: string | null }[])[0]?.pedido_status ?? null;
 }

@@ -47,7 +47,7 @@ export function Inicio({ estoque, abrirBaixa, irValidades, irEstoque }: Props) {
           {repor > 0 && (
             <button className="aviso" onClick={irEstoque}>
               <IcCarrinho className="ic" />
-              <span className="txt"><strong>{repor} {repor === 1 ? 'item na hora de repor' : 'itens na hora de repor'}</strong><small>No estoque mínimo ou abaixo</small></span>
+              <span className="txt"><strong>{repor} {repor === 1 ? 'item na hora de repor' : 'itens na hora de repor'}</strong><small>Abrir a lista de reposição</small></span>
               <IcSeta />
             </button>
           )}

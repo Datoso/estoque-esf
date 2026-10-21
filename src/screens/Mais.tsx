@@ -7,6 +7,7 @@ interface Props {
   modo: string; setModo: (m: string) => void;
   ultimaSync: string | null; pendentes: number; comErro: number;
   sincronizarAgora: () => void; sair: () => void;
+  irRepor: () => void; irEntrada: () => void; nRepor: number; nAbertos: number;
 }
 
 const TEMAS = [
@@ -15,7 +16,7 @@ const TEMAS = [
   { id: 'rosa', nome: 'Outubro Rosa', desc: 'Prevenção do câncer de mama' }
 ];
 
-export function Mais({ perfil, tema, setTema, modo, setModo, ultimaSync, pendentes, comErro, sincronizarAgora, sair }: Props) {
+export function Mais({ perfil, tema, setTema, modo, setModo, ultimaSync, pendentes, comErro, sincronizarAgora, sair, irRepor, irEntrada, nRepor, nAbertos }: Props) {
   return (
     <>
       <h2 className="titulo">Mais</h2>
@@ -23,6 +24,18 @@ export function Mais({ perfil, tema, setTema, modo, setModo, ultimaSync, pendent
         <strong>{perfil.nome}</strong>
         <small>{perfil.unidade_nome} · {perfil.perfil}</small>
       </div>
+
+      <section className="secao">
+        <p className="rotulo">Estoque</p>
+        <button className="linha menu-item" onClick={irRepor}>
+          <span className="meio"><strong>Reposição</strong><span className="sutil">Pedido ao almoxarifado</span></span>
+          {nRepor > 0 && <span className="badge">{nRepor} {nRepor === 1 ? 'item' : 'itens'}</span>}
+        </button>
+        <button className="linha menu-item" onClick={irEntrada}>
+          <span className="meio"><strong>Entrada de mercadoria</strong><span className="sutil">Receber pedido ou entrada avulsa</span></span>
+          {nAbertos > 0 && <span className="badge">{nAbertos} a receber</span>}
+        </button>
+      </section>
 
       <section className="secao">
         <p className="rotulo">Sincronização</p>
@@ -51,7 +64,7 @@ export function Mais({ perfil, tema, setTema, modo, setModo, ultimaSync, pendent
         ))}
       </section>
 
-      <p className="sutil">Reposição, entrada, vacinação, painel e calendário entram nas próximas versões, seguindo o protótipo.</p>
+      <p className="sutil">Vacinação, painel e calendário entram nas próximas versões, seguindo o protótipo.</p>
 
       <button className="linha" onClick={sair}><IcSair /><span className="meio"><strong>Sair</strong><span className="sutil">{pendentes ? 'Sincronize antes de sair' : 'Encerrar a sessão neste aparelho'}</span></span></button>
     </>
