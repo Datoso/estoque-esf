@@ -238,7 +238,7 @@ function Aplicar(p: {
               <button key={x.item.id} className="tile vac-tile" aria-pressed={p.vacSel === x.item.id} onClick={() => p.escolherVacina(x.item.id)}>
                 <strong>{x.item.nome}</strong>
                 <span>{x.disponiveis > 0 ? plural(x.disponiveis, 'dose', 'doses') : 'Sem estoque'}</span>
-                {x.dpf > 1 && <small className="vac-tile-sub">frasco aberto: {x.ativo && !x.vencido ? x.restantes : 0}</small>}
+                {x.dpf > 1 && x.ativo && !x.vencido && <small className="vac-tile-sub">frasco aberto: {x.restantes} {x.restantes === 1 ? "dose" : "doses"}</small>}{x.dpf > 1 && x.ativo && x.vencido && <small className="vac-tile-sub" style={{ color: "var(--vermelho)" }}>frasco aberto vencido</small>}
               </button>
             ))}
           </div>
