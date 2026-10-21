@@ -14,10 +14,12 @@ import { Mais } from './screens/Mais';
 import { Reposicao } from './screens/Reposicao';
 import { Entrada } from './screens/Entrada';
 import { Calendario } from './screens/Calendario';
+import { Painel } from './screens/Painel';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Vacinas } from './screens/Vacinas';
 import { aplicarTema, resolverTema } from './lib/temas';
 import { BaixaSheet } from './components/BaixaSheet';
-import { Abobora, IcCaixa, IcInicio, IcLua, IcMais, IcSol, IcSync, IcVacina, IcValidade, Laco } from './components/Icones';
+import { Abobora, IcCaixa, IcInicio, IcLua, IcMais, IcPainel, IcSol, IcSync, IcVacina, IcValidade, Laco } from './components/Icones';
 
 type Tela = 'inicio' | 'estoque' | 'vacinas' | 'validades' | 'painel' | 'mais' | 'repor' | 'entrada' | 'calendario';
 type Toast = { msg: string; desfazer?: string } | null;
@@ -43,6 +45,7 @@ export default function App() {
   const [modo, setModoSt] = useState(() => lerPref('modo', matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'));
   const timer = useRef<number>();
   const estoque = useEstoque();
+  const vacPendentes = useLiveQuery(() => db.vacFila.where('status').equals('pendente').count(), []);
   const mainRef = useRef<HTMLElement>(null);
 
   const temaAtual = resolverTema(tema);
@@ -148,7 +151,7 @@ export default function App() {
   }
 
   async function sair() {
-    const pend = await db.fila.where('status').anyOf('pendente', 'erro').count();
+    const pend = (await db.fila.where('status').anyOf('pendente', 'erro').count()) + (await db.vacFila.count());
     if (pend > 0) { avisar(`Há ${pend} movimentações não enviadas. Sincronize antes de sair.`); return; }
     await supabase.auth.signOut();
     await db.delete();
@@ -169,7 +172,7 @@ export default function App() {
   }
   if (!perfil) return null;
 
-  const pend = estoque.pendentes;
+  const pend = estoque.pendentes + (vacPendentes ?? 0);
   const syncClasse = estoque.comErro ? 'pilula erro' : online ? 'pilula' : 'pilula offline';
   const syncTxt = !online ? `Offline · ${pend} ${pend === 1 ? 'pendente' : 'pendentes'}` : sincronizando ? 'Sincronizando…' : pend ? `${pend} a enviar` : 'Online';
 
@@ -178,6 +181,7 @@ export default function App() {
     { id: 'estoque', nome: 'Estoque', Ic: IcCaixa },
     { id: 'vacinas', nome: 'Vacinas', Ic: IcVacina },
     { id: 'validades', nome: 'Validades', Ic: IcValidade },
+    { id: 'painel', nome: 'Painel', Ic: IcPainel },
     { id: 'mais', nome: 'Mais', Ic: IcMais }
   ];
 
@@ -208,6 +212,7 @@ export default function App() {
             {tela === 'inicio' && <Inicio estoque={estoque} abrirBaixa={setBaixa} irValidades={() => setTela('validades')} irEstoque={() => setTela('repor')} />}
             {tela === 'repor' && <Reposicao estoque={estoque} podeAprovar={['coordenador', 'admin'].includes(perfil.perfil)} voltar={() => setTela('mais')} aprovar={aprovar} />}
             {tela === 'entrada' && <Entrada estoque={estoque} voltar={() => setTela('mais')} registrar={receber} />}
+            {tela === 'painel' && <Painel estoque={estoque} irRepor={() => setTela('repor')} irValidades={() => setTela('validades')} irVacinas={() => setTela('vacinas')} />}
             {tela === 'calendario' && <Calendario estoque={estoque} voltar={() => setTela('mais')} />}
             {tela === 'vacinas' && <Vacinas perfil={perfil} estoque={estoque} avisar={avisar} sincronizar={() => sincronizarAgora(true)} />}
             {tela === 'estoque' && <EstoqueTela estoque={estoque} abrirBaixa={setBaixa} />}

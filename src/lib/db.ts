@@ -42,7 +42,7 @@ export interface Campanha { id: number; nome: string; tipo: string; publico_alvo
 export interface EventoAgenda { id: number; data: string; titulo: string; tipo: string; descricao: string | null }
 /** Vacinação (preenchido pelo módulo de vacinas) */
 export interface FrascoAberto { id: string; produto_id: number; lote_id: number; aberto_em: string; doses_iniciais: number; encerrado_em: string | null; motivo_encerramento: string | null; doses_perdidas: number }
-export interface AplicacaoVacina { id: string; produto_id: number; lote_id: number; frasco_id: string | null; dose: string; grupo: string; campanha_id: number | null; criado_em_dispositivo: string; enviado: boolean }
+export interface AplicacaoVacina { id: string; produto_id: number; lote_id: number; frasco_id: string | null; dose: string; grupo: string; campanha_id: number | null; criado_em_dispositivo: string; enviado: boolean; dispositivo_id?: string }
 export interface LeituraTemperatura { id: string; atual: number; minima: number; maxima: number; lida_em: string; enviado: boolean }
 /** Operação de vacinação aguardando envio (abrir/encerrar frasco, dose, leitura), na ordem em que aconteceu */
 export interface VacOp { id: string; seq: number; tipo: 'abrir_frasco' | 'encerrar_frasco' | 'aplicacao' | 'leitura'; payload: Record<string, unknown>; status: 'pendente' | 'erro'; erro?: string }
