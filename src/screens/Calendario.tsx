@@ -74,7 +74,7 @@ export function Calendario({ estoque, voltar }: { estoque: Estoque; voltar: () =
                     >
                       <span className="cal-num">{Number(iso.slice(8))}</span>
                       <span className="cal-pontos" aria-hidden="true">
-                        {t.slice(0, 3).map(tp => <i key={tp} className={`cal-ponto cal-${tp}`} />)}
+                        {t.slice(0, 3).map(tp => <i key={tp} className={`cal-ponto cal-t-${tp}`} />)}
                       </span>
                     </button>
                   </span>
@@ -84,7 +84,7 @@ export function Calendario({ estoque, voltar }: { estoque: Estoque; voltar: () =
           ))}
         </div>
         <ul className="cal-legenda" aria-label="Legenda">
-          {TIPOS.map(tp => <li key={tp}><i className={`cal-ponto cal-${tp}`} aria-hidden="true" />{ROTULO_TIPO[tp]}</li>)}
+          {TIPOS.map(tp => <li key={tp}><i className={`cal-ponto cal-t-${tp}`} aria-hidden="true" />{ROTULO_TIPO[tp]}</li>)}
         </ul>
       </section>
 
@@ -99,7 +99,7 @@ export function Calendario({ estoque, voltar }: { estoque: Estoque; voltar: () =
             <ul className="cal-lista">
               {doDia.map((e, i) => (
                 <li key={i} className="cartao cal-ev">
-                  <i className={`cal-ponto cal-${e.tipo}`} aria-hidden="true" />
+                  <i className={`cal-ponto cal-t-${e.tipo}`} aria-hidden="true" />
                   <div className="cal-ev-txt">
                     <strong>{e.titulo}</strong>
                     <small>{e.sub}</small>

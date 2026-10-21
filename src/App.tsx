@@ -17,7 +17,7 @@ import { Calendario } from './screens/Calendario';
 import { Vacinas } from './screens/Vacinas';
 import { aplicarTema, resolverTema } from './lib/temas';
 import { BaixaSheet } from './components/BaixaSheet';
-import { IcCaixa, IcCalendario, IcInicio, IcLua, IcMais, IcSol, IcSync, IcVacina, Laco } from './components/Icones';
+import { Abobora, IcCaixa, IcInicio, IcLua, IcMais, IcSol, IcSync, IcVacina, IcValidade, Laco } from './components/Icones';
 
 type Tela = 'inicio' | 'estoque' | 'vacinas' | 'validades' | 'painel' | 'mais' | 'repor' | 'entrada' | 'calendario';
 type Toast = { msg: string; desfazer?: string } | null;
@@ -177,7 +177,7 @@ export default function App() {
     { id: 'inicio', nome: 'Início', Ic: IcInicio },
     { id: 'estoque', nome: 'Estoque', Ic: IcCaixa },
     { id: 'vacinas', nome: 'Vacinas', Ic: IcVacina },
-    { id: 'validades', nome: 'Validades', Ic: IcCalendario },
+    { id: 'validades', nome: 'Validades', Ic: IcValidade },
     { id: 'mais', nome: 'Mais', Ic: IcMais }
   ];
 
@@ -185,7 +185,11 @@ export default function App() {
     <div className="app">
       <header className="topo">
         <div style={{ minWidth: 0 }}>
-          <h1>{perfil.unidade_nome}{temaEfetivo === 'rosa' && <Laco />}</h1>
+          <h1>
+            <span className="topo-nome">{perfil.unidade_nome}</span>
+            {temaAtual.icone === 'laco' && <Laco size={22} />}
+            {temaAtual.icone === 'abobora' && <Abobora size={22} />}
+          </h1>
           <p>Estoque · {perfil.nome}</p>
         </div>
         <div className="acoes">
@@ -224,7 +228,7 @@ export default function App() {
       <nav className="barra" aria-label="Navegação principal">
         {abas.map(({ id, nome, Ic }) => (
           <button key={id} aria-current={tela === id || (id === 'mais' && (tela === 'repor' || tela === 'entrada' || tela === 'calendario')) ? 'page' : undefined} onClick={() => setTela(id)}>
-            <span className="pil"><Ic /></span>{nome}
+            <span className="pil"><Ic size={24} /></span><span className="aba-nome">{nome}</span>
           </button>
         ))}
       </nav>
