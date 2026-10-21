@@ -1,5 +1,6 @@
 import { db, gravarMeta, lerMeta, type MovPendente, type Pedido, type PedidoItem } from './db';
 import { supabase } from './supabase';
+import { sincronizarVacinas } from './syncVacinas';
 
 export interface Perfil { user_id: string; unidade_id: number; unidade_nome: string; perfil: string; nome: string }
 
@@ -91,7 +92,7 @@ function paraServidor(m: MovPendente) {
 /** Baixa cadastros e saldos da unidade e troca a cópia local. */
 export async function puxarDados(unidadeId: number): Promise<void> {
   const desde = new Date(Date.now() - 60 * 864e5).toISOString();
-  const [cat, prod, lot, sal, par, cmm, ped, emb, cfg] = await Promise.all([
+  const [cat, prod, lot, sal, par, cmm, ped, emb, cfg, camp, evt] = await Promise.all([
     supabase.from('categoria').select('id, nome, ordem'),
     supabase.from('produto').select('id, categoria_id, tipo, nome, principio_ativo, unidade_medida, preco_custo, doses_por_frasco, prazo_apos_abertura_h').eq('ativo', true),
     supabase.from('lote').select('id, produto_id, numero, validade, status, custo_unitario'),
@@ -101,16 +102,20 @@ export async function puxarDados(unidadeId: number): Promise<void> {
     supabase.from('pedido').select('id, numero, status, criado_em, pedido_item ( id, pedido_id, produto_id, qtd_sugerida, qtd_pedida, qtd_recebida )')
       .eq('unidade_id', unidadeId).neq('status', 'cancelado').gte('criado_em', desde).order('numero', { ascending: false }),
     supabase.from('produto_embalagem').select('id, produto_id, nome, fator_conversao'),
-    supabase.from('configuracao').select('margem_seguranca_meses, periodo_cobertura_meses, semaforo_amarelo_dias, semaforo_vermelho_dias').limit(1)
+    supabase.from('configuracao').select('margem_seguranca_meses, periodo_cobertura_meses, semaforo_amarelo_dias, semaforo_vermelho_dias').limit(1),
+    supabase.from('campanha').select('id, nome, tipo, publico_alvo, inicio, fim, meta'),
+    supabase.from('evento_agenda').select('id, data, titulo, tipo, descricao').eq('unidade_id', unidadeId)
   ]);
-  const erro = cat.error ?? prod.error ?? lot.error ?? sal.error ?? par.error ?? cmm.error ?? ped.error ?? emb.error ?? cfg.error;
+  const erro = cat.error ?? prod.error ?? lot.error ?? sal.error ?? par.error ?? cmm.error ?? ped.error ?? emb.error ?? cfg.error ?? camp.error ?? evt.error;
   if (erro) throw new Error(erro.message);
   const cmmPor = new Map((cmm.data ?? []).map(c => [c.produto_id, Number(c.cmm)]));
   const pedidos = (ped.data ?? []) as unknown as (Pedido & { pedido_item: PedidoItem[] })[];
-  await db.transaction('rw', [db.categorias, db.produtos, db.lotes, db.saldos, db.parametros, db.fila, db.pedidos, db.pedidoItens, db.embalagens], async () => {
+  await db.transaction('rw', [db.categorias, db.produtos, db.lotes, db.saldos, db.parametros, db.fila, db.pedidos, db.pedidoItens, db.embalagens, db.campanhas, db.eventos], async () => {
     // O saldo do servidor já inclui o que foi enviado: tira da fila na mesma transação
     await db.fila.where('status').equals('enviado').delete();
-    await Promise.all([db.categorias.clear(), db.produtos.clear(), db.lotes.clear(), db.saldos.clear(), db.parametros.clear(), db.pedidos.clear(), db.pedidoItens.clear(), db.embalagens.clear()]);
+    await Promise.all([db.categorias.clear(), db.produtos.clear(), db.lotes.clear(), db.saldos.clear(), db.parametros.clear(), db.pedidos.clear(), db.pedidoItens.clear(), db.embalagens.clear(), db.campanhas.clear(), db.eventos.clear()]);
+    await db.campanhas.bulkPut(camp.data ?? []);
+    await db.eventos.bulkPut(evt.data ?? []);
     await db.pedidos.bulkPut(pedidos.map(({ pedido_item: _i, ...p }) => p));
     await db.pedidoItens.bulkPut(pedidos.flatMap(p => p.pedido_item));
     await db.embalagens.bulkPut(emb.data ?? []);
@@ -136,6 +141,7 @@ export function sincronizar(unidadeId: number): Promise<void> {
     emAndamento = (async () => {
       try {
         await enviarFila();
+        await sincronizarVacinas(unidadeId);
         await puxarDados(unidadeId);
       } finally {
         emAndamento = null;

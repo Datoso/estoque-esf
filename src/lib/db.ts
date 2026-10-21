@@ -38,6 +38,14 @@ export interface Parametro {
 export interface Pedido { id: number; numero: number; status: string; criado_em: string }
 export interface PedidoItem { id: number; pedido_id: number; produto_id: number; qtd_sugerida: number; qtd_pedida: number; qtd_recebida: number }
 export interface Embalagem { id: number; produto_id: number; nome: string; fator_conversao: number }
+export interface Campanha { id: number; nome: string; tipo: string; publico_alvo: string | null; inicio: string; fim: string; meta: number | null }
+export interface EventoAgenda { id: number; data: string; titulo: string; tipo: string; descricao: string | null }
+/** Vacinação (preenchido pelo módulo de vacinas) */
+export interface FrascoAberto { id: string; produto_id: number; lote_id: number; aberto_em: string; doses_iniciais: number; encerrado_em: string | null; motivo_encerramento: string | null; doses_perdidas: number }
+export interface AplicacaoVacina { id: string; produto_id: number; lote_id: number; frasco_id: string | null; dose: string; grupo: string; campanha_id: number | null; criado_em_dispositivo: string; enviado: boolean }
+export interface LeituraTemperatura { id: string; atual: number; minima: number; maxima: number; lida_em: string; enviado: boolean }
+/** Operação de vacinação aguardando envio (abrir/encerrar frasco, dose, leitura), na ordem em que aconteceu */
+export interface VacOp { id: string; seq: number; tipo: 'abrir_frasco' | 'encerrar_frasco' | 'aplicacao' | 'leitura'; payload: Record<string, unknown>; status: 'pendente' | 'erro'; erro?: string }
 export interface Configuracao { margem_seguranca_meses: number; periodo_cobertura_meses: number; semaforo_amarelo_dias: number; semaforo_vermelho_dias: number }
 
 /** Movimentação criada no aparelho e ainda não confirmada pelo servidor. */
@@ -75,6 +83,12 @@ class BancoLocal extends Dexie {
   pedidos!: Table<Pedido, number>;
   pedidoItens!: Table<PedidoItem, number>;
   embalagens!: Table<Embalagem, number>;
+  campanhas!: Table<Campanha, number>;
+  eventos!: Table<EventoAgenda, number>;
+  frascos!: Table<FrascoAberto, string>;
+  aplicacoes!: Table<AplicacaoVacina, string>;
+  leituras!: Table<LeituraTemperatura, string>;
+  vacFila!: Table<VacOp, string>;
   meta!: Table<Meta, string>;
 
   constructor() {
@@ -93,6 +107,16 @@ class BancoLocal extends Dexie {
       pedidos: 'id, numero, status',
       pedidoItens: 'id, pedido_id, produto_id',
       embalagens: 'id, produto_id'
+    });
+    this.version(3).stores({
+      campanhas: 'id, inicio, fim',
+      eventos: 'id, data'
+    });
+    this.version(4).stores({
+      frascos: 'id, produto_id, encerrado_em',
+      aplicacoes: 'id, produto_id, criado_em_dispositivo',
+      leituras: 'id, lida_em',
+      vacFila: 'id, seq, status'
     });
   }
 }

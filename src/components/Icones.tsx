@@ -18,3 +18,4 @@ export const Laco = ({ size = 20 }: { size?: number }) => (
     <path fill="var(--accent)" d="M12 3c-2 0-3.5 1.6-3.5 3.6 0 1.6.9 3.3 2.2 5.2L6 20.5l2.4.9 3.6-6.4 3.6 6.4 2.4-.9-4.7-8.7c1.3-1.9 2.2-3.6 2.2-5.2C15.5 4.6 14 3 12 3zm0 2c.9 0 1.5.7 1.5 1.6 0 .9-.6 2.1-1.5 3.5-.9-1.4-1.5-2.6-1.5-3.5C10.5 5.7 11.1 5 12 5z" />
   </svg>
 );
+export const IcVacina = ({ size, className }: P) => <svg {...base(size)} className={className}><path d="M18 3l3 3M19.5 4.5 16 8M15 5l4 4M17 7l-8.5 8.5H5.5v-3L14 4M5.5 18.5 3 21M9 10l2 2M7 12l2 2" /></svg>;

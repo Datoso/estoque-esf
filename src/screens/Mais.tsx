@@ -7,7 +7,7 @@ interface Props {
   modo: string; setModo: (m: string) => void;
   ultimaSync: string | null; pendentes: number; comErro: number;
   sincronizarAgora: () => void; sair: () => void;
-  irRepor: () => void; irEntrada: () => void; nRepor: number; nAbertos: number;
+  irRepor: () => void; irEntrada: () => void; irCalendario: () => void; nRepor: number; nAbertos: number;
 }
 
 const TEMAS = [
@@ -16,7 +16,7 @@ const TEMAS = [
   { id: 'rosa', nome: 'Outubro Rosa', desc: 'Prevenção do câncer de mama' }
 ];
 
-export function Mais({ perfil, tema, setTema, modo, setModo, ultimaSync, pendentes, comErro, sincronizarAgora, sair, irRepor, irEntrada, nRepor, nAbertos }: Props) {
+export function Mais({ perfil, tema, setTema, modo, setModo, ultimaSync, pendentes, comErro, sincronizarAgora, sair, irRepor, irEntrada, irCalendario, nRepor, nAbertos }: Props) {
   return (
     <>
       <h2 className="titulo">Mais</h2>

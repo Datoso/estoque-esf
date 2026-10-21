@@ -13,10 +13,13 @@ import { Validades } from './screens/Validades';
 import { Mais } from './screens/Mais';
 import { Reposicao } from './screens/Reposicao';
 import { Entrada } from './screens/Entrada';
+import { Calendario } from './screens/Calendario';
+import { Vacinas } from './screens/Vacinas';
+import { aplicarTema, resolverTema } from './lib/temas';
 import { BaixaSheet } from './components/BaixaSheet';
-import { IcCaixa, IcCalendario, IcInicio, IcLua, IcMais, IcSol, IcSync, Laco } from './components/Icones';
+import { IcCaixa, IcCalendario, IcInicio, IcLua, IcMais, IcSol, IcSync, IcVacina, Laco } from './components/Icones';
 
-type Tela = 'inicio' | 'estoque' | 'validades' | 'mais' | 'repor' | 'entrada';
+type Tela = 'inicio' | 'estoque' | 'vacinas' | 'validades' | 'painel' | 'mais' | 'repor' | 'entrada' | 'calendario';
 type Toast = { msg: string; desfazer?: string } | null;
 
 function lerPref(chave: string, padrao: string): string {
@@ -42,11 +45,13 @@ export default function App() {
   const estoque = useEstoque();
   const mainRef = useRef<HTMLElement>(null);
 
-  const temaEfetivo = tema === 'campanha' ? (new Date().getMonth() === 9 ? 'rosa' : 'padrao') : tema;
+  const temaAtual = resolverTema(tema);
+  const temaEfetivo = temaAtual.id;
   useEffect(() => {
     document.documentElement.dataset.tema = temaEfetivo;
     document.documentElement.dataset.modo = modo;
-  }, [temaEfetivo, modo]);
+    aplicarTema(temaAtual, modo === 'escuro');
+  }, [temaAtual, temaEfetivo, modo]);
 
   const avisar = useCallback((msg: string, desfazer?: string) => {
     window.clearTimeout(timer.current);
@@ -171,6 +176,7 @@ export default function App() {
   const abas: { id: Tela; nome: string; Ic: typeof IcInicio }[] = [
     { id: 'inicio', nome: 'Início', Ic: IcInicio },
     { id: 'estoque', nome: 'Estoque', Ic: IcCaixa },
+    { id: 'vacinas', nome: 'Vacinas', Ic: IcVacina },
     { id: 'validades', nome: 'Validades', Ic: IcCalendario },
     { id: 'mais', nome: 'Mais', Ic: IcMais }
   ];
@@ -198,12 +204,14 @@ export default function App() {
             {tela === 'inicio' && <Inicio estoque={estoque} abrirBaixa={setBaixa} irValidades={() => setTela('validades')} irEstoque={() => setTela('repor')} />}
             {tela === 'repor' && <Reposicao estoque={estoque} podeAprovar={['coordenador', 'admin'].includes(perfil.perfil)} voltar={() => setTela('mais')} aprovar={aprovar} />}
             {tela === 'entrada' && <Entrada estoque={estoque} voltar={() => setTela('mais')} registrar={receber} />}
+            {tela === 'calendario' && <Calendario estoque={estoque} voltar={() => setTela('mais')} />}
+            {tela === 'vacinas' && <Vacinas perfil={perfil} estoque={estoque} avisar={avisar} sincronizar={() => sincronizarAgora(true)} />}
             {tela === 'estoque' && <EstoqueTela estoque={estoque} abrirBaixa={setBaixa} />}
             {tela === 'validades' && <Validades estoque={estoque} perderVencido={perderVencido} />}
             {tela === 'mais' && (
               <Mais perfil={perfil} tema={tema} setTema={t => { setTemaSt(t); gravarPref('tema', t); }} modo={modo} setModo={m => { setModoSt(m); gravarPref('modo', m); }}
                 ultimaSync={ultimaSync} pendentes={pend} comErro={estoque.comErro} sincronizarAgora={() => sincronizarAgora()} sair={sair}
-                irRepor={() => setTela('repor')} irEntrada={() => setTela('entrada')}
+                irRepor={() => setTela('repor')} irEntrada={() => setTela('entrada')} irCalendario={() => setTela('calendario')}
                 nRepor={estoque.itens.filter(i => i.repor).length} nAbertos={estoque.pedidos.filter(p => p.status !== 'recebido').length} />
             )}
           </>
@@ -215,7 +223,7 @@ export default function App() {
 
       <nav className="barra" aria-label="Navegação principal">
         {abas.map(({ id, nome, Ic }) => (
-          <button key={id} aria-current={tela === id || (id === 'mais' && (tela === 'repor' || tela === 'entrada')) ? 'page' : undefined} onClick={() => setTela(id)}>
+          <button key={id} aria-current={tela === id || (id === 'mais' && (tela === 'repor' || tela === 'entrada' || tela === 'calendario')) ? 'page' : undefined} onClick={() => setTela(id)}>
             <span className="pil"><Ic /></span>{nome}
           </button>
         ))}
